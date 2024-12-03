@@ -8,8 +8,7 @@ const productSchema = new mongoose.Schema({
   },
   sku: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
   category: {
     type: String,
@@ -30,9 +29,11 @@ const productSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
-  supplier: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Supplier'
+  owner: {
+    type: String,
+    required: true,
+    ref: 'User',
+    index: true
   },
   createdAt: {
     type: Date,
@@ -43,6 +44,8 @@ const productSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+productSchema.index({ owner: 1, sku: 1 }, { unique: true });
 
 productSchema.pre('save', function(next) {
   this.updatedAt = Date.now();

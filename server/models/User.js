@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
+  firebaseId: {
+    type: String,
+    required: true,
+    unique: true
+  },
   email: {
     type: String,
     required: true,
@@ -9,24 +14,21 @@ const userSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
-  password: {
-    type: String,
-    required: true
-  },
   role: {
     type: String,
-    enum: ['admin', 'manager'],
-    default: 'manager'
-  },
-  isApproved: {
-    type: Boolean,
-    default: false
+    enum: ['admin', 'user'],
+    default: 'user'
   },
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  lastLogin: {
+    type: Date,
+    default: Date.now
   }
 });
+
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();

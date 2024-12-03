@@ -1,29 +1,29 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import admin from '../config/firebase-admin.js';
 
 export const protect = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.headers.authorization?.split('Bearer ')[1];
     
     if (!token) {
-      return res.status(401).json({ message: 'Not authorized' });
+      return res.status(401).json({ message: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
-    
-    if (!user || !user.isApproved) {
-      return res.status(401).json({ message: 'Not authorized' });
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      req.user = decodedToken;
+      next();
+    } catch (error) {
+      console.error('Error verifying Firebase token:', error);
+      return res.status(401).json({ message: 'Invalid token' });
     }
-
-    req.user = user;
-    next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     res.status(401).json({ message: 'Not authorized' });
   }
 };
 
-export const admin = (req, res, next) => {
+export const adminMiddleware = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
   } else {

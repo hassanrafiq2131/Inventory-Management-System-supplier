@@ -1,19 +1,23 @@
 import Invoice from '../models/Invoice.js';
 
-// Get all invoices
 export const getInvoices = async (req, res) => {
   try {
-    const invoices = await Invoice.find().populate('supplier');
+    const invoices = await Invoice.find({ owner: req.user.uid })
+      .populate('items.product')
+      .sort({ date: -1 });
     res.status(200).json(invoices);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Create a new invoice
 export const createInvoice = async (req, res) => {
-  const invoice = new Invoice(req.body);
   try {
+    const invoice = new Invoice({
+      ...req.body,
+      owner: req.user.uid,
+      number: await generateInvoiceNumber(req.user.uid)
+    });
     const savedInvoice = await invoice.save();
     res.status(201).json(savedInvoice);
   } catch (error) {
@@ -21,55 +25,90 @@ export const createInvoice = async (req, res) => {
   }
 };
 
-// Get an invoice by ID
 export const getInvoiceById = async (req, res) => {
   try {
-    const invoice = await Invoice.findById(req.params.id).populate('supplier');
-    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+    const invoice = await Invoice.findOne({
+      _id: req.params.id,
+      owner: req.user.uid
+    }).populate('items.product');
+    
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+    
     res.status(200).json(invoice);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Update an invoice
 export const updateInvoice = async (req, res) => {
   try {
-    const updatedInvoice = await Invoice.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedInvoice) return res.status(404).json({ message: 'Invoice not found' });
-    res.status(200).json(updatedInvoice);
+    const invoice = await Invoice.findOneAndUpdate(
+      { _id: req.params.id, owner: req.user.uid },
+      req.body,
+      { new: true }
+    );
+    
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+    
+    res.status(200).json(invoice);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// Delete an invoice
 export const deleteInvoice = async (req, res) => {
   try {
-    const deletedInvoice = await Invoice.findByIdAndDelete(req.params.id);
-    if (!deletedInvoice) return res.status(404).json({ message: 'Invoice not found' });
+    const invoice = await Invoice.findOneAndDelete({
+      _id: req.params.id,
+      owner: req.user.uid
+    });
+    
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+    
     res.status(200).json({ message: 'Invoice deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get supplier recommendations
-export const getSupplierRecommendations = async (req, res) => {
-  // Implement your logic for supplier recommendations
-  res.status(200).json({ message: 'Supplier recommendations' });
-};
-
-// Update invoice status
 export const updateInvoiceStatus = async (req, res) => {
   try {
-    const invoice = await Invoice.findById(req.params.id);
-    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
-
+    const invoice = await Invoice.findOne({
+      _id: req.params.id,
+      owner: req.user.uid
+    });
+    
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+    
     invoice.status = req.body.status;
+    if (req.body.status === 'paid') {
+      invoice.paymentDate = new Date();
+    }
+    
     await invoice.save();
     res.status(200).json(invoice);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
+
+export const getSupplierRecommendations = async (req, res) => {
+  // Implement your logic for supplier recommendations
+  res.status(200).json({ message: 'Supplier recommendations' });
+};
+
+async function generateInvoiceNumber(userId) {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const count = await Invoice.countDocuments({ owner: userId });
+  return `INV-${year}${month}-${(count + 1).toString().padStart(4, '0')}`;
+}

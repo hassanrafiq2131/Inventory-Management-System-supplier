@@ -1,17 +1,51 @@
 import axios from 'axios';
+import { getAuth } from 'firebase/auth';
+import { app } from '../config/firebase';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Ensure this matches your server's base URL
+  baseURL: 'http://localhost:5000/api',
 });
 
-// Add request interceptor to include auth token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Add request interceptor to include Firebase token
+api.interceptors.request.use(async (config) => {
+  try {
+    const auth = getAuth(app);
+    const user = auth.currentUser;
+    
+    if (user) {
+      const token = await user.getIdToken();
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (error) {
+    console.error('Error getting Firebase token:', error);
   }
   return config;
+}, (error) => {
+  return Promise.reject(error);
 });
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Handle token refresh or logout if needed
+      const auth = getAuth(app);
+      if (auth.currentUser) {
+        try {
+          const newToken = await auth.currentUser.getIdToken(true);
+          error.config.headers.Authorization = `Bearer ${newToken}`;
+          return api.request(error.config);
+        } catch (refreshError) {
+          // If token refresh fails, sign out the user
+          await auth.signOut();
+          window.location.href = '/login';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const productApi = {
   getAll: () => api.get('/inventory'),
@@ -37,10 +71,11 @@ export const reportApi = {
 };
 
 export const authApi = {
-    login: (credentials: any) => api.post('/auth/login', credentials),
-    register: (userData: any) => api.post('/auth/register', userData),
-    forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
-    resetPassword: (token: string, password: string) => api.post('/auth/reset-password', { token, password })
-  };
+  login: (credentials: any) => api.post('/auth/login', credentials),
+  register: (userData: any) => api.post('/auth/register', userData),
+  forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token: string, password: string) => api.post('/auth/reset-password', { token, password }),
+  sync: () => api.get('/auth/sync')
+};
 
 export default api;

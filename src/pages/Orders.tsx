@@ -145,7 +145,10 @@ const Orders = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      ${order.total.toFixed(2)}
+                      $
+                      {order.totalAmount
+                        ? order.totalAmount.toFixed(2)
+                        : "0.00"}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

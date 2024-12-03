@@ -1,37 +1,43 @@
 import Product from '../models/Product.js';
 import Order from '../models/Order.js';
+import Invoice from '../models/Invoice.js';
 
-// Get inventory report
 export const getInventoryReport = async (req, res) => {
   try {
-    const products = await Product.find();
-    res.status(200).json(products);
+    const products = await Product.find({ owner: req.user.uid });
+    const totalValue = products.reduce((sum, p) => sum + (p.quantity * p.price), 0);
+    const lowStockProducts = products.filter(p => p.quantity <= p.reorderPoint);
+
+    res.status(200).json({
+      totalProducts: products.length,
+      lowStockProducts: lowStockProducts.length,
+      totalValue,
+      products,
+      lowStockItems: lowStockProducts
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get sales report
 export const getSalesReport = async (req, res) => {
   try {
-    const orders = await Order.find({ status: 'approved' }).populate('items.product');
+    const orders = await Order.find({ owner: req.user.uid, status: 'approved' }).populate('items.product');
     res.status(200).json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get stock movement report
 export const getStockMovementReport = async (req, res) => {
   try {
-    const orders = await Order.find().populate('items.product');
+    const orders = await Order.find({ owner: req.user.uid }).populate('items.product');
     res.status(200).json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Download report
 export const downloadReport = async (req, res) => {
   const { type } = req.params;
   try {
@@ -40,11 +46,4 @@ export const downloadReport = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-};
-
-export default {
-  getInventoryReport,
-  getSalesReport,
-  getStockMovementReport,
-  downloadReport
 };

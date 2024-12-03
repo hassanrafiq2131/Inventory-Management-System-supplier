@@ -3,13 +3,13 @@ import mongoose from 'mongoose';
 const invoiceSchema = new mongoose.Schema({
   number: {
     type: String,
-    required: true,
-    unique: true
-  },
-  supplier: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Supplier',
     required: true
+  },
+  owner: {
+    type: String,
+    required: true,
+    ref: 'User',
+    index: true
   },
   date: {
     type: Date,
@@ -61,6 +61,8 @@ const invoiceSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+invoiceSchema.index({ owner: 1, number: 1 }, { unique: true });
 
 invoiceSchema.pre('save', function(next) {
   this.updatedAt = Date.now();

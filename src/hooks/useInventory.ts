@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { productApi } from '../services/api';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 
 export interface Product {
   _id: string;
@@ -18,13 +19,17 @@ export const useInventory = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const auth = useAuth();
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await productApi.getAll();
-      setProducts(response.data);
-      setError(null);
+      // Only fetch if user is authenticated
+      if (auth.currentUser) {
+        const response = await productApi.getAll();
+        setProducts(response.data);
+        setError(null);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch products';
       setError(errorMessage);
@@ -46,8 +51,10 @@ export const useInventory = () => {
   };
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    if (auth.currentUser) {
+      fetchProducts();
+    }
+  }, [auth.currentUser]); // Re-fetch when auth state changes
 
   return {
     products,

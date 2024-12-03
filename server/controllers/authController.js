@@ -6,6 +6,41 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
+export const syncUser = async (req, res) => {
+  try {
+    const { uid, email } = req.user;
+    
+    let user = await User.findOne({ firebaseId: uid });
+    
+    if (!user) {
+      user = await User.create({
+        firebaseId: uid,
+        email: email
+      });
+    } else {
+      user.lastLogin = new Date();
+      await user.save();
+    }
+    
+    res.json(user);
+  } catch (error) {
+    console.error('Error syncing user:', error);
+    res.status(500).json({ message: 'Error syncing user data' });
+  }
+};
+
+export const getCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findOne({ firebaseId: req.user.uid });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching user data' });
+  }
+};
+
 export const register = async (req, res) => {
   try {
     const { email, password } = req.body;
