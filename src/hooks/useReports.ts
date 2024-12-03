@@ -1,55 +1,39 @@
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { jsPDF } from 'jspdf';
-
-type ReportType = 'inventory' | 'sales' | 'movement';
+import { reportApi } from '../services/api';
+import { toast } from 'react-hot-toast';
+import { generateReport, downloadPDF } from '../utils/reportGenerator';
 
 export const useReports = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const auth = useAuth();
 
-  const generateReport = async (type: ReportType) => {
+  const generateReportData = async (type: string, dateRange?: { start: Date; end: Date }) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/reports/${type}`, {
-        headers: {
-          Authorization: `Bearer ${auth?.currentUser?.accessToken}`
-        }
+      const data = await generateReport(type, dateRange || { 
+        start: new Date(new Date().setMonth(new Date().getMonth() - 1)), 
+        end: new Date() 
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
+      setError(null);
       return data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate report');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate report';
+      setError(errorMessage);
+      toast.error(errorMessage);
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  const downloadPDF = async () => {
+  const downloadReportPDF = async (reportData: any, type: string) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/reports/download/all', {
-        headers: {
-          Authorization: `Bearer ${auth?.currentUser?.accessToken}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-
-      const doc = new jsPDF();
-      
-      // Add report content to PDF
-      doc.setFontSize(16);
-      doc.text('Inventory Management Report', 20, 20);
-      
-      // Add more content as needed
-      
-      doc.save('inventory-report.pdf');
+      await downloadPDF(reportData, type);
+      toast.success('Report downloaded successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to download report');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to download report';
+      toast.error(errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -59,7 +43,7 @@ export const useReports = () => {
   return {
     loading,
     error,
-    generateReport,
-    downloadPDF
+    generateReport: generateReportData,
+    downloadPDF: downloadReportPDF
   };
 };

@@ -1,18 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
-import { useInventory } from '../hooks/useInventory';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { Plus, Search, Edit2, Trash2 } from "lucide-react";
+import { useInventory, Product } from "../hooks/useInventory";
+import ProductModal from "../components/modals/ProductModal";
+import { productApi } from "../services/api";
+import { toast } from "react-hot-toast";
 
 const Inventory = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const { products, loading, error, addProduct, updateProduct, deleteProduct } = useInventory();
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { products = [], loading, error, refreshProducts } = useInventory(); // Ensure products is an array
+  const [showModal, setShowModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const filteredProducts = products?.filter(product => 
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleAddEdit = async (productData: any) => {
+    try {
+      if (selectedProduct) {
+        // Edit product
+        await productApi.update(selectedProduct._id, productData);
+        toast.success("Product updated successfully");
+      } else {
+        // Add new product
+        await productApi.create(productData);
+        toast.success("Product added successfully");
+      }
+      refreshProducts();
+      setShowModal(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      toast.error("Failed to save product");
+    }
+  };
+
+  const handleDelete = async (productId: string) => {
+    try {
+      await productApi.delete(productId);
+      toast.success("Product deleted successfully");
+      refreshProducts();
+    } catch (error) {
+      toast.error("Failed to delete product");
+    }
+  };
+
+  const filteredProducts = Array.isArray(products)
+    ? products.filter((product) =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <motion.div
@@ -21,9 +57,14 @@ const Inventory = () => {
       className="space-y-6"
     >
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Inventory Management
+        </h1>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            setSelectedProduct(null);
+            setShowModal(true);
+          }}
           className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-blue-700 transition-colors"
         >
           <Plus className="w-5 h-5" />
@@ -49,13 +90,27 @@ const Inventory = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Product
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  SKU
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Quantity
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -67,41 +122,53 @@ const Inventory = () => {
                   exit={{ opacity: 0 }}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {product.name}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">{product.sku}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{product.category}</div>
+                    <div className="text-sm text-gray-500">
+                      {product.category}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{product.quantity}</div>
+                    <div className="text-sm text-gray-500">
+                      {product.quantity}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">${product.price}</div>
+                    <div className="text-sm text-gray-500">
+                      ${product.price}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      product.quantity > product.reorderPoint
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {product.quantity > product.reorderPoint ? 'In Stock' : 'Low Stock'}
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        product.quantity > product.reorderPoint
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {product.quantity > product.reorderPoint
+                        ? "In Stock"
+                        : "Low Stock"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
                       onClick={() => {
                         setSelectedProduct(product);
-                        setShowAddModal(true);
+                        setShowModal(true);
                       }}
                       className="text-blue-600 hover:text-blue-900 mr-3"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => deleteProduct(product._id)}
+                      onClick={() => handleDelete(product._id)}
                       className="text-red-600 hover:text-red-900"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -114,7 +181,15 @@ const Inventory = () => {
         </div>
       </div>
 
-      {/* Add/Edit Product Modal would go here */}
+      <ProductModal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setSelectedProduct(null);
+        }}
+        onSubmit={handleAddEdit}
+        product={selectedProduct}
+      />
     </motion.div>
   );
 };

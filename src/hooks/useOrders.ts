@@ -1,96 +1,66 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { orderApi } from '../services/api';
+import { toast } from 'react-hot-toast';
 
-interface OrderItem {
+export interface OrderItem {
   product: string;
   quantity: number;
   price: number;
 }
 
-interface Order {
+export interface Order {
   _id: string;
   orderNumber: string;
   items: OrderItem[];
   total: number;
   status: 'pending' | 'approved' | 'rejected';
+  requestedBy: string;
+  approvedBy?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export const useOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const auth = useAuth();
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders', {
-        headers: {
-          Authorization: `Bearer ${auth?.currentUser?.accessToken}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-      setOrders(data);
+      setLoading(true);
+      const response = await orderApi.getAll();
+      setOrders(response.data);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch orders');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch orders';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const createOrder = async (orderData: Omit<Order, '_id' | 'orderNumber' | 'createdAt'>) => {
+  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
     try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${auth?.currentUser?.accessToken}`
-        },
-        body: JSON.stringify(orderData)
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-      setOrders([...orders, data]);
-      return data;
+      await orderApi.updateStatus(orderId, status);
+      await fetchOrders();
+      toast.success('Order status updated successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create order');
-      throw err;
-    }
-  };
-
-  const updateOrderStatus = async (id: string, status: Order['status']) => {
-    try {
-      const response = await fetch(`/api/orders/${id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${auth?.currentUser?.accessToken}`
-        },
-        body: JSON.stringify({ status })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-      setOrders(orders.map(o => o._id === id ? { ...o, status: data.status } : o));
-      return data;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update order status');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update order status';
+      toast.error(errorMessage);
       throw err;
     }
   };
 
   useEffect(() => {
-    if (auth?.currentUser) {
-      fetchOrders();
-    }
-  }, [auth?.currentUser]);
+    fetchOrders();
+  }, []);
 
   return {
     orders,
     loading,
     error,
-    createOrder,
-    updateOrderStatus,
-    refreshOrders: fetchOrders
+    refreshOrders: fetchOrders,
+    updateOrderStatus
   };
 };

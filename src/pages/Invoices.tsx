@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Download, Search, Eye, MessageSquare } from 'lucide-react';
-import { useInvoices } from '../hooks/useInvoices';
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Download, Search, Eye, MessageSquare } from "lucide-react";
+import { useInvoices } from "../hooks/useInvoices";
+import { Invoice } from "../hooks/useInvoices";
 
 const Invoices = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const { invoices, loading, error, getSupplierRecommendations } = useInvoices();
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { invoices, loading, error, getSupplierRecommendations } =
+    useInvoices();
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
-  const filteredInvoices = invoices?.filter(invoice =>
-    invoice.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.supplier.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredInvoices = invoices?.filter(
+    (invoice) =>
+      invoice.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.supplier.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -48,12 +51,24 @@ const Invoices = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Invoice #
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Supplier
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Amount
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -65,10 +80,14 @@ const Invoices = () => {
                   exit={{ opacity: 0 }}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">#{invoice.number}</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      #{invoice.number}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{invoice.supplier.name}</div>
+                    <div className="text-sm text-gray-900">
+                      {invoice.supplier.name}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">
@@ -76,17 +95,22 @@ const Invoices = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">${invoice.amount.toFixed(2)}</div>
+                    <div className="text-sm text-gray-900">
+                      ${invoice.amount.toFixed(2)}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      invoice.status === 'paid'
-                        ? 'bg-green-100 text-green-800'
-                        : invoice.status === 'pending'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        invoice.status === "paid"
+                          ? "bg-green-100 text-green-800"
+                          : invoice.status === "pending"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {invoice.status.charAt(0).toUpperCase() +
+                        invoice.status.slice(1)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -97,7 +121,9 @@ const Invoices = () => {
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => {/* Download invoice */}}
+                      onClick={() => {
+                        /* Download invoice */
+                      }}
                       className="text-gray-600 hover:text-gray-900"
                     >
                       <Download className="w-4 h-4" />

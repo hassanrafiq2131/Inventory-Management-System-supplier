@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-interface Invoice {
+export interface Invoice {
   _id: string;
   number: string;
   supplier: {
