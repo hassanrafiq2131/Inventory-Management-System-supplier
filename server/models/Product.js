@@ -29,6 +29,11 @@ const productSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  imageUrl: {
+    type: String, // Field for storing the image URL
+    required: false, // Optional (set to true if you want to enforce image upload)
+    default: 'https://via.placeholder.com/150' // Default placeholder image URL
+  },
   owner: {
     type: String,
     required: true,
@@ -45,8 +50,10 @@ const productSchema = new mongoose.Schema({
   }
 });
 
+// Add unique index for owner and SKU combination
 productSchema.index({ owner: 1, sku: 1 }, { unique: true });
 
+// Update the `updatedAt` timestamp before saving
 productSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();

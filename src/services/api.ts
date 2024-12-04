@@ -52,7 +52,16 @@ export const productApi = {
   create: (data: any) => api.post('/inventory', data),
   update: (id: string, data: any) => api.put(`/inventory/${id}`, data),
   delete: (id: string) => api.delete(`/inventory/${id}`),
-  getLowStock: () => api.get('/inventory/low-stock')
+  getLowStock: () => api.get('/inventory/low-stock'),
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return api.post('/inventory/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 };
 
 export const orderApi = {
