@@ -13,6 +13,7 @@ export interface Product {
   reorderPoint: number;
   createdAt: string;
   updatedAt: string;
+  imageUrl: string;
 }
 
 export const useInventory = () => {

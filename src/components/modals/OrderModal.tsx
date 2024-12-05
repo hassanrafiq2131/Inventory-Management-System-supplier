@@ -14,12 +14,23 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
   const [orderItems, setOrderItems] = useState([
     { productId: "", quantity: 1, price: 0 },
   ]);
+  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(
+    null
+  );
+  const [searchQuery, setSearchQuery] = useState(""); // For searching products
 
   useEffect(() => {
-    if (order) {
-      setOrderItems(order.items);
+    if (isOpen) {
+      if (order) {
+        // Populate form with existing order data
+        setOrderItems(order.items);
+      } else {
+        // Clear the form when creating a new order
+        setOrderItems([{ productId: "", quantity: 1, price: 0 }]);
+        setSearchQuery("");
+      }
     }
-  }, [order]);
+  }, [isOpen, order]);
 
   const handleAddItem = () => {
     setOrderItems([...orderItems, { productId: "", quantity: 1, price: 0 }]);
@@ -37,6 +48,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
       const product = products.find((p) => p._id === value);
       if (product) {
         newItems[index].price = product.price;
+        newItems[index].quantity = 1; // Reset quantity to 1 when a new product is selected
       }
     }
 
@@ -77,75 +89,125 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {orderItems.map((item, index) => (
-            <div key={index} className="flex items-center space-x-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">
-                  Product
-                </label>
-                <select
-                  value={item.productId}
-                  onChange={(e) =>
-                    handleItemChange(index, "productId", e.target.value)
-                  }
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  required
+          {orderItems.map((item, index) => {
+            const selectedProduct = products.find(
+              (p) => p._id === item.productId
+            );
+            return (
+              <div key={index} className="flex items-center space-x-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Product
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={
+                        selectedProduct ? selectedProduct.name : searchQuery
+                      }
+                      onClick={() =>
+                        setOpenDropdownIndex(
+                          openDropdownIndex === index ? null : index
+                        )
+                      }
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 cursor-pointer"
+                      placeholder="Select a product"
+                    />
+                    {openDropdownIndex === index && (
+                      <div className="absolute z-10 w-full mt-2 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                        <ul>
+                          {products
+                            .filter((product) =>
+                              product.name
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase())
+                            )
+                            .map((product) => (
+                              <li
+                                key={product._id}
+                                className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100"
+                                onClick={() => {
+                                  handleItemChange(
+                                    index,
+                                    "productId",
+                                    product._id
+                                  );
+                                  setOpenDropdownIndex(null); // Close dropdown
+                                  setSearchQuery(""); // Reset search query
+                                }}
+                              >
+                                <img
+                                  src={product.imageUrl}
+                                  alt={product.name}
+                                  className="w-6 h-6 mr-2"
+                                />
+                                <span>
+                                  {product.name} - ${product.price}
+                                </span>
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="w-24">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Quantity
+                  </label>
+                  <input
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      handleItemChange(
+                        index,
+                        "quantity",
+                        Math.min(
+                          Math.max(parseInt(e.target.value), 1),
+                          selectedProduct?.quantity || 1
+                        )
+                      )
+                    }
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    required
+                    min="1"
+                    max={selectedProduct?.quantity || ""}
+                  />
+                </div>
+
+                <div className="w-24">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Price
+                  </label>
+                  <input
+                    type="number"
+                    value={item.price}
+                    onChange={(e) =>
+                      handleItemChange(
+                        index,
+                        "price",
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    required
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleRemoveItem(index)}
+                  className="mt-6 p-2 text-red-600 hover:text-red-800"
                 >
-                  <option value="">Select a product</option>
-                  {products.map((product) => (
-                    <option key={product._id} value={product._id}>
-                      {product.name} - ${product.price}
-                    </option>
-                  ))}
-                </select>
+                  <Minus className="w-5 h-5" />
+                </button>
               </div>
-
-              <div className="w-24">
-                <label className="block text-sm font-medium text-gray-700">
-                  Quantity
-                </label>
-                <input
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) =>
-                    handleItemChange(
-                      index,
-                      "quantity",
-                      parseInt(e.target.value)
-                    )
-                  }
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  required
-                  min="1"
-                />
-              </div>
-
-              <div className="w-24">
-                <label className="block text-sm font-medium text-gray-700">
-                  Price
-                </label>
-                <input
-                  type="number"
-                  value={item.price}
-                  onChange={(e) =>
-                    handleItemChange(index, "price", parseFloat(e.target.value))
-                  }
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  required
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleRemoveItem(index)}
-                className="mt-6 p-2 text-red-600 hover:text-red-800"
-              >
-                <Minus className="w-5 h-5" />
-              </button>
-            </div>
-          ))}
+            );
+          })}
 
           <div className="flex justify-between items-center">
             <button

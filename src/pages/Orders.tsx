@@ -3,14 +3,16 @@ import { motion } from "framer-motion";
 import { Plus, Filter, FileText, Trash2 } from "lucide-react";
 import { useOrders, Order } from "../hooks/useOrders";
 import OrderModal from "../components/modals/OrderModal";
+import OrderDetailsModal from "../components/modals/OrderDetailsModal"; // Import the new modal
 import { orderApi } from "../services/api";
 import { toast } from "react-hot-toast";
 
 const Orders = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const { orders, loading, error, refreshOrders } = useOrders();
-  const [showModal, setShowModal] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false); // New state for details modal
 
   const handleAddEdit = async (orderData: any) => {
     try {
@@ -22,7 +24,7 @@ const Orders = () => {
         toast.success("Order created successfully");
       }
       refreshOrders();
-      setShowModal(false);
+      setShowOrderModal(false);
       setSelectedOrder(null);
     } catch (error) {
       toast.error("Operation failed. Please try again.");
@@ -72,7 +74,7 @@ const Orders = () => {
         <button
           onClick={() => {
             setSelectedOrder(null);
-            setShowModal(true);
+            setShowOrderModal(true);
           }}
           className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-blue-700 transition-colors"
         >
@@ -128,28 +130,23 @@ const Orders = () => {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      #{order.orderNumber}
-                    </div>
+                  <td
+                    className="px-6 py-4 whitespace-nowrap text-blue-600 cursor-pointer hover:underline"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setShowDetailsModal(true);
+                    }}
+                  >
+                    #{order.orderNumber}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </div>
+                    {new Date(order.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
-                      {order.items.length} items
-                    </div>
+                    {order.items.length} items
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      $
-                      {order.totalAmount
-                        ? order.totalAmount.toFixed(2)
-                        : "0.00"}
-                    </div>
+                    ${order.totalAmount?.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select
@@ -170,16 +167,7 @@ const Orders = () => {
                       <option value="rejected">Rejected</option>
                     </select>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setShowModal(true);
-                      }}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
-                    >
-                      <FileText className="w-4 h-4" />
-                    </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
                     <button
                       onClick={() => handleDelete(order._id)}
                       className="text-red-600 hover:text-red-900"
@@ -195,12 +183,18 @@ const Orders = () => {
       </div>
 
       <OrderModal
-        isOpen={showModal}
+        isOpen={showOrderModal}
         onClose={() => {
-          setShowModal(false);
+          setShowOrderModal(false);
           setSelectedOrder(null);
         }}
         onSubmit={handleAddEdit}
+        order={selectedOrder}
+      />
+
+      <OrderDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
         order={selectedOrder}
       />
     </motion.div>
