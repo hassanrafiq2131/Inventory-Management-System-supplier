@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { X } from "lucide-react";
 import { Order } from "../../hooks/useOrders";
+import { invoiceApi } from "../../services/api"; // Import the invoice API
+import { toast } from "react-hot-toast"; // Toast for notifications
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
@@ -13,13 +15,34 @@ const OrderDetailsModal = ({
   onClose,
   order,
 }: OrderDetailsModalProps) => {
+  const [isGenerating, setIsGenerating] = useState(false);
+
   if (!isOpen || !order) return null;
+
+  const handleGenerateInvoice = async () => {
+    if (order.status !== "approved") {
+      toast.error("Invoice can only be generated for approved orders.");
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      const response = await invoiceApi.createFromOrder(order._id);
+      toast.success("Invoice generated successfully!");
+      console.log("Generated Invoice:", response.data);
+    } catch (error) {
+      console.error("Error generating invoice:", error);
+      toast.error("Failed to generate invoice. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-8 w-full max-w-4xl">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Invoice</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Order Details</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -120,6 +143,23 @@ const OrderDetailsModal = ({
             </p>
           </div>
         </div>
+
+        {/* Generate Invoice Button */}
+        {order.status === "approved" && (
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={handleGenerateInvoice}
+              disabled={isGenerating}
+              className={`px-4 py-2 text-white rounded-md ${
+                isGenerating
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              {isGenerating ? "Generating..." : "Generate Invoice"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

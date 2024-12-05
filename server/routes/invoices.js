@@ -4,18 +4,25 @@ import * as invoiceController from '../controllers/invoiceController.js';
 
 const router = express.Router();
 
+// Apply authentication middleware
 router.use(protect);
 
-router.route('/')
-  .get(invoiceController.getInvoices)
-  .post(invoiceController.createInvoice);
+// Routes for managing invoices
+router
+  .route('/')
+  .get(invoiceController.getInvoices) // Get all invoices for the authenticated user
+  .post(invoiceController.createInvoiceFromOrder); // Create a new invoice from an approved order
 
-router.route('/:id')
-  .get(invoiceController.getInvoiceById)
-  .put(invoiceController.updateInvoice)
-  .delete(invoiceController.deleteInvoice);
+router
+  .route('/:id')
+  .get(invoiceController.getInvoiceById) // Get a specific invoice by ID
+  .put(invoiceController.updateInvoice) // Update an invoice
+  .delete(invoiceController.deleteInvoice); // Delete an invoice
 
-router.get('/recommendations', invoiceController.getSupplierRecommendations);
+// Route for updating the status of an invoice
 router.put('/:id/status', invoiceController.updateInvoiceStatus);
+
+// Route for supplier recommendations
+// router.get('/recommendations', invoiceController.getSupplierRecommendations);
 
 export default router;

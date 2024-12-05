@@ -1,20 +1,52 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Download, Search, Eye, MessageSquare } from "lucide-react";
-import { useInvoices } from "../hooks/useInvoices";
-import { Invoice } from "../hooks/useInvoices";
+import { Download, Search, Eye, MessageSquare, X } from "lucide-react";
+import { invoiceApi } from "../services/api";
 
 const Invoices = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const { invoices, loading, error, getSupplierRecommendations } =
-    useInvoices();
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
-  const filteredInvoices = invoices?.filter(
+  // Fetch invoices
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        setLoading(true);
+        const response = await invoiceApi.getAll();
+        setInvoices(response.data);
+      } catch (err) {
+        console.error("Error fetching invoices:", err);
+        setError("Failed to fetch invoices");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInvoices();
+  }, []);
+
+  const handleGetRecommendations = async () => {
+    try {
+      const recommendations = await invoiceApi.getRecommendations();
+      console.log("Supplier Recommendations:", recommendations.data);
+    } catch (err) {
+      console.error("Error fetching recommendations:", err);
+    }
+  };
+
+  const filteredInvoices = invoices.filter(
     (invoice) =>
       invoice.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.supplier.name.toLowerCase().includes(searchTerm.toLowerCase())
+      (invoice.supplier?.name || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div className="text-red-600">{error}</div>;
 
   return (
     <motion.div
@@ -22,10 +54,11 @@ const Invoices = () => {
       animate={{ opacity: 1 }}
       className="space-y-6"
     >
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Invoice Management</h1>
         <button
-          onClick={() => getSupplierRecommendations()}
+          onClick={handleGetRecommendations}
           className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-blue-700 transition-colors"
         >
           <MessageSquare className="w-5 h-5" />
@@ -33,6 +66,7 @@ const Invoices = () => {
         </button>
       </div>
 
+      {/* Search Bar */}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="p-4 border-b">
           <div className="relative">
@@ -47,6 +81,7 @@ const Invoices = () => {
           </div>
         </div>
 
+        {/* Invoices Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -72,7 +107,7 @@ const Invoices = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInvoices?.map((invoice) => (
+              {filteredInvoices.map((invoice) => (
                 <motion.tr
                   key={invoice._id}
                   initial={{ opacity: 0 }}
@@ -86,7 +121,7 @@ const Invoices = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {invoice.supplier.name}
+                      {invoice.supplier?.name || "N/A"}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -122,7 +157,8 @@ const Invoices = () => {
                     </button>
                     <button
                       onClick={() => {
-                        /* Download invoice */
+                        /* Download invoice logic */
+                        console.log(`Downloading invoice ${invoice.number}`);
                       }}
                       className="text-gray-600 hover:text-gray-900"
                     >
@@ -136,7 +172,42 @@ const Invoices = () => {
         </div>
       </div>
 
-      {/* Invoice Details Modal would go here */}
+      {/* Invoice Details Modal */}
+      {selectedInvoice && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">
+                Invoice Details - #{selectedInvoice.number}
+              </h2>
+              <button
+                onClick={() => setSelectedInvoice(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div>
+              <p>
+                <strong>Supplier:</strong>{" "}
+                {selectedInvoice.supplier?.name || "N/A"}
+              </p>
+              <p>
+                <strong>Date:</strong>{" "}
+                {new Date(selectedInvoice.date).toLocaleDateString()}
+              </p>
+              <p>
+                <strong>Amount:</strong> ${selectedInvoice.amount.toFixed(2)}
+              </p>
+              <p>
+                <strong>Status:</strong>{" "}
+                {selectedInvoice.status.charAt(0).toUpperCase() +
+                  selectedInvoice.status.slice(1)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 };

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus, Minus } from "lucide-react";
 import { useInventory } from "../../hooks/useInventory";
+import { toast } from "react-hot-toast";
+import { productApi } from "../../services/api"; // Import API for updating products
 
 interface OrderModalProps {
   isOpen: boolean;
@@ -10,22 +12,20 @@ interface OrderModalProps {
 }
 
 const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
-  const { products } = useInventory();
+  const { products, refreshProducts } = useInventory();
   const [orderItems, setOrderItems] = useState([
     { productId: "", quantity: 1, price: 0 },
   ]);
   const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(
     null
   );
-  const [searchQuery, setSearchQuery] = useState(""); // For searching products
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (isOpen) {
       if (order) {
-        // Populate form with existing order data
         setOrderItems(order.items);
       } else {
-        // Clear the form when creating a new order
         setOrderItems([{ productId: "", quantity: 1, price: 0 }]);
         setSearchQuery("");
       }
@@ -34,10 +34,12 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
 
   const handleAddItem = () => {
     setOrderItems([...orderItems, { productId: "", quantity: 1, price: 0 }]);
+    toast.success("Item slot added to the order!");
   };
 
   const handleRemoveItem = (index: number) => {
     setOrderItems(orderItems.filter((_, i) => i !== index));
+    toast.success("Item removed from the order.");
   };
 
   const handleItemChange = (index: number, field: string, value: any) => {
@@ -48,7 +50,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
       const product = products.find((p) => p._id === value);
       if (product) {
         newItems[index].price = product.price;
-        newItems[index].quantity = 1; // Reset quantity to 1 when a new product is selected
+        newItems[index].quantity = 1;
+        toast.success(`Product "${product.name}" added to the order!`);
       }
     }
 
@@ -62,12 +65,49 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Filter products that are not already selected in orderItems
+  const getAvailableProducts = () => {
+    const selectedProductIds = orderItems.map((item) => item.productId);
+    return products.filter(
+      (product) => !selectedProductIds.includes(product._id)
+    );
+  };
+
+  const decrementProductQuantities = async () => {
+    for (const item of orderItems) {
+      try {
+        const product = products.find((p) => p._id === item.productId);
+        if (product) {
+          const updatedQuantity = product.quantity - item.quantity;
+          if (updatedQuantity < 0) {
+            toast.error(`Not enough stock for product: ${product.name}`);
+            return false; // Abort if stock is insufficient
+          }
+
+          await productApi.update(item.productId, {
+            quantity: updatedQuantity,
+          });
+        }
+      } catch (error) {
+        console.error("Error updating product quantity:", error);
+        toast.error("Failed to update product quantities. Please try again.");
+        return false; // Abort on failure
+      }
+    }
+    return true; // Proceed if all updates succeed
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const isSuccessful = await decrementProductQuantities();
+    if (!isSuccessful) return; // Abort if stock update fails
+
     onSubmit({
       items: orderItems,
       total: calculateTotal(),
     });
+    refreshProducts(); // Refresh inventory after updates
     onClose();
   };
 
@@ -95,6 +135,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
             );
             return (
               <div key={index} className="flex items-center space-x-4">
+                {/* Product Dropdown */}
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700">
                     Product
@@ -117,7 +158,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                     {openDropdownIndex === index && (
                       <div className="absolute z-10 w-full mt-2 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                         <ul>
-                          {products
+                          {getAvailableProducts()
                             .filter((product) =>
                               product.name
                                 .toLowerCase()
@@ -133,8 +174,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                                     "productId",
                                     product._id
                                   );
-                                  setOpenDropdownIndex(null); // Close dropdown
-                                  setSearchQuery(""); // Reset search query
+                                  setOpenDropdownIndex(null);
+                                  setSearchQuery("");
                                 }}
                               >
                                 <img
@@ -153,6 +194,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                   </div>
                 </div>
 
+                {/* Quantity Input */}
                 <div className="w-24">
                   <label className="block text-sm font-medium text-gray-700">
                     Quantity
@@ -177,6 +219,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                   />
                 </div>
 
+                {/* Price Input */}
                 <div className="w-24">
                   <label className="block text-sm font-medium text-gray-700">
                     Price
@@ -198,6 +241,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                   />
                 </div>
 
+                {/* Remove Button */}
                 <button
                   type="button"
                   onClick={() => handleRemoveItem(index)}
@@ -209,6 +253,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
             );
           })}
 
+          {/* Footer */}
           <div className="flex justify-between items-center">
             <button
               type="button"

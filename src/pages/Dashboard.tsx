@@ -1,24 +1,123 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Package, TrendingUp, AlertTriangle, DollarSign } from 'lucide-react';
-
-const data = [
-  { name: 'Jan', value: 400 },
-  { name: 'Feb', value: 300 },
-  { name: 'Mar', value: 600 },
-  { name: 'Apr', value: 800 },
-  { name: 'May', value: 500 },
-  { name: 'Jun', value: 700 },
-];
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { Package, TrendingUp, AlertTriangle, DollarSign } from "lucide-react";
+import { productApi, orderApi } from "../services/api";
 
 const Dashboard = () => {
-  const stats = [
-    { title: 'Total Products', value: '1,234', icon: Package, color: 'bg-blue-500' },
-    { title: 'Monthly Sales', value: '$12,345', icon: TrendingUp, color: 'bg-green-500' },
-    { title: 'Low Stock Items', value: '23', icon: AlertTriangle, color: 'bg-yellow-500' },
-    { title: 'Revenue', value: '$123,456', icon: DollarSign, color: 'bg-purple-500' },
-  ];
+  const [stats, setStats] = useState([
+    {
+      title: "Total Products",
+      value: "-",
+      icon: Package,
+      color: "bg-blue-500",
+    },
+    {
+      title: "Monthly Sales",
+      value: "-",
+      icon: TrendingUp,
+      color: "bg-green-500",
+    },
+    {
+      title: "Low Stock Items",
+      value: "-",
+      icon: AlertTriangle,
+      color: "bg-yellow-500",
+    },
+    { title: "Revenue", value: "-", icon: DollarSign, color: "bg-purple-500" },
+  ]);
+  const [salesData, setSalesData] = useState([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch total products and low stock items
+        const [inventoryRes, lowStockRes] = await Promise.all([
+          productApi.getAll(),
+          productApi.getLowStock(),
+        ]);
+
+        const totalProducts = inventoryRes.data.length;
+        const lowStockItems = lowStockRes.data.length;
+
+        // Fetch all orders and aggregate data for the chart
+        const ordersRes = await orderApi.getAll();
+        const orders = ordersRes.data;
+
+        const monthlySales = orders.length;
+        const revenue = orders.reduce(
+          (sum, order) =>
+            sum +
+            order.items.reduce(
+              (orderSum, item) => orderSum + item.quantity * item.price,
+              0
+            ),
+          0
+        );
+
+        // Aggregate sales data by month
+        const salesChartData = orders.reduce((acc, order) => {
+          const orderDate = new Date(order.createdAt);
+          const month = orderDate.toLocaleString("default", { month: "short" });
+
+          const orderTotal = order.items.reduce(
+            (sum, item) => sum + item.quantity * item.price,
+            0
+          );
+
+          const existingMonth = acc.find((data) => data.name === month);
+          if (existingMonth) {
+            existingMonth.value += orderTotal;
+          } else {
+            acc.push({ name: month, value: orderTotal });
+          }
+
+          return acc;
+        }, []);
+
+        setStats([
+          {
+            title: "Total Products",
+            value: totalProducts,
+            icon: Package,
+            color: "bg-blue-500",
+          },
+          {
+            title: "Monthly Sales",
+            value: monthlySales,
+            icon: TrendingUp,
+            color: "bg-green-500",
+          },
+          {
+            title: "Low Stock Items",
+            value: lowStockItems,
+            icon: AlertTriangle,
+            color: "bg-yellow-500",
+          },
+          {
+            title: "Revenue",
+            value: `$${revenue.toFixed(2)}`,
+            icon: DollarSign,
+            color: "bg-purple-500",
+          },
+        ]);
+
+        setSalesData(salesChartData);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   return (
     <motion.div
@@ -27,7 +126,7 @@ const Dashboard = () => {
       className="space-y-6"
     >
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <motion.div
@@ -42,8 +141,12 @@ const Dashboard = () => {
                 <stat.icon className="w-6 h-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {stat.title}
+                </p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stat.value}
+                </p>
               </div>
             </div>
           </motion.div>
@@ -51,10 +154,12 @@ const Dashboard = () => {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Sales Overview</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Monthly Sales Overview
+        </h2>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data}>
+            <BarChart data={salesData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />

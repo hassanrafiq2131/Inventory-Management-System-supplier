@@ -9,6 +9,9 @@ const router = express.Router();
 
 router.use(protect);
 
+router.get('/low-stock', inventoryController.getLowStockProducts);
+router.post('/adjust/:id', inventoryController.adjustStock);
+
 router.route('/')
   .get(inventoryController.getProducts)
   .post(inventoryController.addProduct);
@@ -18,8 +21,7 @@ router.route('/:id')
   .put(inventoryController.updateProduct)
   .delete(inventoryController.deleteProduct);
 
-router.get('/low-stock', inventoryController.getLowStockProducts);
-router.post('/adjust/:id', inventoryController.adjustStock);
+
 
 router.post('/upload', upload.single('image'), async (req, res) => {
   try {

@@ -10,12 +10,14 @@ import Inventory from "./pages/Inventory";
 import Orders from "./pages/Orders";
 import Reports from "./pages/Reports";
 import Invoices from "./pages/Invoices";
+import { Toaster } from "react-hot-toast";
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <div className="min-h-screen bg-gray-50">
+          <Toaster />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

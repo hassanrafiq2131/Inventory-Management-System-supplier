@@ -87,4 +87,15 @@ export const authApi = {
   sync: () => api.get('/auth/sync')
 };
 
+export const invoiceApi = {
+  getAll: () => api.get('/invoices'), // Get all invoices
+  createFromOrder: (orderId: string) => api.post('/invoices', { orderId }), // Create an invoice from an approved order
+  getById: (id: string) => api.get(`/invoices/${id}`), // Get a specific invoice by ID
+  update: (id: string, data: any) => api.put(`/invoices/${id}`, data), // Update an invoice
+  delete: (id: string) => api.delete(`/invoices/${id}`), // Delete an invoice
+  updateStatus: (id: string, status: string) => api.put(`/invoices/${id}/status`, { status }), // Update invoice status
+  getRecommendations: () => api.get('/invoices/recommendations'), // Get supplier recommendations
+};
+
+
 export default api;

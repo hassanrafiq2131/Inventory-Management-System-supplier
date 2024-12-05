@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { invoiceApi } from "../services/api";
 
 export interface Invoice {
   _id: string;
@@ -10,27 +11,23 @@ export interface Invoice {
   };
   date: string;
   amount: number;
-  status: 'pending' | 'paid' | 'overdue';
+  status: "pending" | "paid" | "overdue";
 }
 
 export const useInvoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const auth = useAuth();
 
   const fetchInvoices = async () => {
     try {
-      const response = await fetch('/api/invoices', {
-        headers: {
-          Authorization: `Bearer ${auth?.currentUser?.accessToken}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-      setInvoices(data);
+      setLoading(true);
+      const response = await invoiceApi.getAll(); // Fetch invoices using invoiceApi
+      setInvoices(response.data);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch invoices');
+      console.error("Failed to fetch invoices:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch invoices");
     } finally {
       setLoading(false);
     }
@@ -38,31 +35,28 @@ export const useInvoices = () => {
 
   const getSupplierRecommendations = async () => {
     try {
-      const response = await fetch('/api/invoices/recommendations', {
-        headers: {
-          Authorization: `Bearer ${auth?.currentUser?.accessToken}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-      return data;
+      const response = await invoiceApi.getRecommendations(); // Fetch recommendations using invoiceApi
+      return response.data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get recommendations');
+      console.error("Failed to get supplier recommendations:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to get supplier recommendations"
+      );
       throw err;
     }
   };
 
   useEffect(() => {
-    if (auth?.currentUser) {
-      fetchInvoices();
-    }
-  }, [auth?.currentUser]);
+    fetchInvoices(); // Fetch invoices when the hook is first used
+  }, []);
 
   return {
     invoices,
     loading,
     error,
     getSupplierRecommendations,
-    refreshInvoices: fetchInvoices
+    refreshInvoices: fetchInvoices, // Provide a method to refresh the invoices
   };
 };
