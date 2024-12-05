@@ -9,8 +9,19 @@ import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
 import Orders from "./pages/Orders";
 import Reports from "./pages/Reports";
+import StockRequests from "./pages/StockRequests";
 import Invoices from "./pages/Invoices";
+import QuickSearch from "./components/layout/QuickSearch"; // Import QuickSearch component
 import { Toaster } from "react-hot-toast";
+
+export const menuItems = [
+  { label: "Dashboard", path: "/" },
+  { label: "Inventory", path: "/inventory" },
+  { label: "Orders", path: "/orders" },
+  { label: "Stock Requests", path: "/stock-requests" },
+  { label: "Reports", path: "/reports" },
+  { label: "Invoices", path: "/invoices" },
+];
 
 function App() {
   return (
@@ -18,50 +29,28 @@ function App() {
       <BrowserRouter>
         <div className="min-h-screen bg-gray-50">
           <Toaster />
+          {/* Quick Search */}
+          <QuickSearch menuItems={menuItems} />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route
-              path="/"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/inventory"
-              element={
-                <PrivateRoute>
-                  <Inventory />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/orders"
-              element={
-                <PrivateRoute>
-                  <Orders />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/reports"
-              element={
-                <PrivateRoute>
-                  <Reports />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/invoices"
-              element={
-                <PrivateRoute>
-                  <Invoices />
-                </PrivateRoute>
-              }
-            />
+            {menuItems.map((item) => (
+              <Route
+                key={item.path}
+                path={item.path}
+                element={
+                  <PrivateRoute>
+                    {item.label === "Dashboard" && <Dashboard />}
+                    {item.label === "Inventory" && <Inventory />}
+                    {item.label === "Orders" && <Orders />}
+                    {item.label === "Reports" && <Reports />}
+                    {item.label === "Invoices" && <Invoices />}
+                    {item.label === "Stock Requests" && <StockRequests />}
+                  </PrivateRoute>
+                }
+              />
+            ))}
           </Routes>
         </div>
       </BrowserRouter>

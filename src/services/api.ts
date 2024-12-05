@@ -97,5 +97,13 @@ export const invoiceApi = {
   getRecommendations: () => api.get('/invoices/recommendations'), // Get supplier recommendations
 };
 
+export const stockRequestApi = {
+  getAll: () => api.get('/stock-requests'),
+  create: (data: { product: string; quantity: number }) => api.post('/stock-requests', data),
+  update: (id: string, data: { status: 'approved' | 'rejected'; approvedBy?: string }) =>
+    api.put(`/stock-requests/${id}`, data),
+  delete: (id: string) => api.delete(`/stock-requests/${id}`),
+};
+
 
 export default api;

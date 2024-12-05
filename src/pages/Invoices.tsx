@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Download, Search, Eye, MessageSquare, X } from "lucide-react";
 import { invoiceApi } from "../services/api";
+import { toast } from "react-hot-toast";
 
 const Invoices = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -17,9 +18,11 @@ const Invoices = () => {
         setLoading(true);
         const response = await invoiceApi.getAll();
         setInvoices(response.data);
+        toast.success("Invoices fetched successfully");
       } catch (err) {
         console.error("Error fetching invoices:", err);
         setError("Failed to fetch invoices");
+        toast.error("Failed to fetch invoices");
       } finally {
         setLoading(false);
       }
@@ -32,8 +35,10 @@ const Invoices = () => {
     try {
       const recommendations = await invoiceApi.getRecommendations();
       console.log("Supplier Recommendations:", recommendations.data);
+      toast.success("Supplier recommendations fetched successfully");
     } catch (err) {
       console.error("Error fetching recommendations:", err);
+      toast.error("Failed to fetch supplier recommendations");
     }
   };
 
@@ -159,6 +164,7 @@ const Invoices = () => {
                       onClick={() => {
                         /* Download invoice logic */
                         console.log(`Downloading invoice ${invoice.number}`);
+                        toast.success(`Downloading invoice ${invoice.number}`);
                       }}
                       className="text-gray-600 hover:text-gray-900"
                     >

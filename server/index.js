@@ -7,6 +7,7 @@ import inventoryRoutes from './routes/inventory.js';
 import orderRoutes from './routes/orders.js';
 import reportRoutes from './routes/reports.js';
 import invoiceRoutes from './routes/invoices.js';
+import StockRequest from './routes/stock.js';
 
 dotenv.config();
 
@@ -35,6 +36,8 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/stock-requests', StockRequest);
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
