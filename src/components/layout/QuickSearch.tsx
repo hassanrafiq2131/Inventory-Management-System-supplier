@@ -60,20 +60,20 @@ const QuickSearch = ({ menuItems }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center">
       <div
-        className="w-full max-w-3xl p-6 bg-black/30 backdrop-blur-md shadow-lg rounded-lg relative"
+        className="w-full max-w-3xl p-6 bg-white/20 backdrop-blur-md shadow-lg rounded-lg relative"
         style={{
           boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
         }}
       >
         <input
           type="text"
-          placeholder="Quick Navigate... (Press ESC to close)"
+          placeholder="Quick Navigation... (ESC to close)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full px-4 py-3 mb-4 text-lg bg-transparent border border-gray-300 rounded-md text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           ref={inputRef}
         />
-        <ul className="max-h-60 overflow-y-auto">
+        <ul className="max-h-60 overflow-y-auto hide-scrollbar">
           {filteredItems.map((item, index) => (
             <li
               key={item.path}
