@@ -48,7 +48,7 @@ const productSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-});
+},  { collection: 'products' });
 
 // Add unique index for owner and SKU combination
 productSchema.index({ owner: 1, sku: 1 }, { unique: true });

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus, Minus } from "lucide-react";
-import { useInventory } from "../../hooks/useInventory";
+import { useSupplierInventory } from "../../hooks/useSuppllierInventory"; // Corrected hook import
 import { toast } from "react-hot-toast";
-import { productApi } from "../../services/api"; // Import API for updating products
 
 interface OrderModalProps {
   isOpen: boolean;
@@ -12,7 +11,7 @@ interface OrderModalProps {
 }
 
 const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
-  const { products, refreshProducts } = useInventory();
+  const { items: supplierItems, refreshItems } = useSupplierInventory(); // Fetch supplier inventory
   const [orderItems, setOrderItems] = useState([
     { productId: "", quantity: 1, price: 0 },
   ]);
@@ -32,6 +31,11 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
     }
   }, [isOpen, order]);
 
+  // Debug supplierItems
+  useEffect(() => {
+    console.log("Supplier Items Fetched:", supplierItems);
+  }, [supplierItems]);
+
   const handleAddItem = () => {
     setOrderItems([...orderItems, { productId: "", quantity: 1, price: 0 }]);
     toast.success("Item slot added to the order!");
@@ -47,7 +51,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
     newItems[index] = { ...newItems[index], [field]: value };
 
     if (field === "productId") {
-      const product = products.find((p) => p._id === value);
+      const product = supplierItems.find((p) => p._id === value);
       if (product) {
         newItems[index].price = product.price;
         newItems[index].quantity = 1;
@@ -65,49 +69,22 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
     );
   };
 
-  // Filter products that are not already selected in orderItems
-  const getAvailableProducts = () => {
+  const getAvailableSupplierItems = () => {
     const selectedProductIds = orderItems.map((item) => item.productId);
-    return products.filter(
-      (product) => !selectedProductIds.includes(product._id)
+    return (
+      supplierItems?.filter(
+        (product) => !selectedProductIds.includes(product._id)
+      ) || []
     );
-  };
-
-  const decrementProductQuantities = async () => {
-    for (const item of orderItems) {
-      try {
-        const product = products.find((p) => p._id === item.productId);
-        if (product) {
-          const updatedQuantity = product.quantity - item.quantity;
-          if (updatedQuantity < 0) {
-            toast.error(`Not enough stock for product: ${product.name}`);
-            return false; // Abort if stock is insufficient
-          }
-
-          await productApi.update(item.productId, {
-            quantity: updatedQuantity,
-          });
-        }
-      } catch (error) {
-        console.error("Error updating product quantity:", error);
-        toast.error("Failed to update product quantities. Please try again.");
-        return false; // Abort on failure
-      }
-    }
-    return true; // Proceed if all updates succeed
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const isSuccessful = await decrementProductQuantities();
-    if (!isSuccessful) return; // Abort if stock update fails
-
     onSubmit({
       items: orderItems,
       total: calculateTotal(),
     });
-    refreshProducts(); // Refresh inventory after updates
+    refreshItems(); // Refresh supplier inventory
     onClose();
   };
 
@@ -130,7 +107,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {orderItems.map((item, index) => {
-            const selectedProduct = products.find(
+            const selectedProduct = supplierItems?.find(
               (p) => p._id === item.productId
             );
             return (
@@ -138,7 +115,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                 {/* Product Dropdown */}
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Product
+                    Supplier Product
                   </label>
                   <div className="relative">
                     <input
@@ -158,7 +135,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                     {openDropdownIndex === index && (
                       <div className="absolute z-10 w-full mt-2 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                         <ul>
-                          {getAvailableProducts()
+                          {getAvailableSupplierItems()
                             .filter((product) =>
                               product.name
                                 .toLowerCase()
@@ -206,16 +183,11 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                       handleItemChange(
                         index,
                         "quantity",
-                        Math.min(
-                          Math.max(parseInt(e.target.value), 1),
-                          selectedProduct?.quantity || 1
-                        )
+                        Math.max(parseInt(e.target.value), 1)
                       )
                     }
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                     required
-                    min="1"
-                    max={selectedProduct?.quantity || ""}
                   />
                 </div>
 
@@ -236,8 +208,6 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                     }
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
                     required
-                    min="0"
-                    step="0.01"
                   />
                 </div>
 

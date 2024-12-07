@@ -105,19 +105,25 @@ const OrderDetailsModal = ({
             </thead>
             <tbody>
               {order.items.map((item, index) => {
-                const product = item.product; // Assuming item.product is a populated object
+                const product = item.product || {}; // Fallback to an empty object if product is null or undefined
                 const total = item.quantity * item.price;
                 return (
                   <tr key={index} className="border-b">
                     <td className="px-4 py-3">
                       <img
-                        src={product.imageUrl}
-                        alt={product.name}
+                        src={
+                          product.imageUrl || "https://via.placeholder.com/150"
+                        } // Default placeholder if imageUrl is missing
+                        alt={product.name || "Product Image"} // Default alt text
                         className="w-12 h-12 object-cover rounded-full"
                       />
                     </td>
-                    <td className="px-4 py-3 text-gray-800">{product.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{product.sku}</td>
+                    <td className="px-4 py-3 text-gray-800">
+                      {product.name || "Unknown Product"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {product.sku || "N/A"}
+                    </td>
                     <td className="px-4 py-3 text-center text-gray-800">
                       {item.quantity}
                     </td>

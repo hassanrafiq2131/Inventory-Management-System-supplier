@@ -14,6 +14,7 @@ api.interceptors.request.use(async (config) => {
     
     if (user) {
       const token = await user.getIdToken();
+      // console.log("[DEBUG] token:", token);
       config.headers.Authorization = `Bearer ${token}`;
     }
   } catch (error) {
@@ -105,6 +106,25 @@ export const stockRequestApi = {
   update: (id: string, data: { status: 'approved' | 'rejected'; approvedBy?: string }) =>
     api.put(`/stock-requests/${id}`, data),
   delete: (id: string) => api.delete(`/stock-requests/${id}`),
+};
+
+export const suppliersInventoryApi = {
+  getAll: () => api.get('/supplier-inventory'),
+  create: (data: any) => api.post('/supplier-inventory', data),
+  update: (id: string, data: any) => api.put(`/supplier-inventory/${id}`, data),
+  delete: (id: string) => api.delete(`/supplier-inventory/${id}`),
+  getLowStock: () => api.get('/supplier-inventory/low-stock'),
+  adjustStock: (id: string, adjustment: number) =>
+    api.post(`/supplier-inventory/adjust/${id}`, { adjustment }),
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return api.post('/supplier-inventory/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 };
 
 
