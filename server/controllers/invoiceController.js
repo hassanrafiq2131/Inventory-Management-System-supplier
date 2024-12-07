@@ -1,5 +1,8 @@
 import Invoice from '../models/Invoice.js';
 import Order from '../models/Order.js';
+import PDFDocument from 'pdfkit';
+import path from 'path';
+import fs from 'fs';
 
 // Get all invoices for a user
 export const getInvoices = async (req, res) => {
@@ -142,3 +145,53 @@ async function generateInvoiceNumber(userId) {
   const count = await Invoice.countDocuments({ owner: userId });
   return `INV-${year}${month}-${(count + 1).toString().padStart(4, '0')}`;
 }
+
+
+export const downloadInvoice = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+
+    // Ensure the `amount` field is valid
+    const amount = invoice.amount || 0;
+
+    const doc = new PDFDocument({ margin: 50 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Invoice-${invoice.number}.pdf`);
+
+    doc.pipe(res);
+
+    // Add Invoice Details
+    doc.fontSize(20).text(`Invoice #${invoice.number}`, { align: 'center' }).moveDown(2);
+    doc.fontSize(12).text(`Date: ${new Date(invoice.date).toLocaleDateString()}`);
+    doc.text(`Due Date: ${new Date(invoice.dueDate).toLocaleDateString()}`);
+    doc.text(`Status: ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}`);
+    doc.text(`Amount: $${amount.toFixed(2)}`).moveDown();
+
+    // Add Items Section
+    doc.fontSize(16).text('Items:', { underline: true }).moveDown();
+    invoice.items.forEach((item, index) => {
+      doc
+        .fontSize(12)
+        .text(`${index + 1}. ${item.product} - Quantity: ${item.quantity}, Price: $${item.price.toFixed(2)}`);
+    });
+
+    // Notes Section
+    if (invoice.notes) {
+      doc.moveDown().fontSize(12).text(`Notes: ${invoice.notes}`);
+    }
+
+    // Footer
+    doc.moveDown(2).fontSize(10).text(`Generated on: ${new Date().toLocaleString()}`, { align: 'right' });
+
+    doc.end();
+  } catch (error) {
+    console.error('Error generating invoice PDF:', error);
+
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Failed to generate invoice PDF' });
+    }
+  }
+};

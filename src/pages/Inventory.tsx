@@ -5,6 +5,8 @@ import { useInventory, Product } from "../hooks/useInventory";
 import ProductModal from "../components/modals/ProductModal";
 import { productApi } from "../services/api";
 import { toast } from "react-hot-toast";
+import { confirmAlert } from "react-confirm-alert";
+import "react-confirm-alert/src/react-confirm-alert.css";
 
 const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,13 +34,27 @@ const Inventory = () => {
   };
 
   const handleDelete = async (productId: string) => {
-    try {
-      await productApi.delete(productId);
-      toast.success("Product deleted successfully");
-      refreshProducts();
-    } catch (error) {
-      toast.error("Failed to delete product");
-    }
+    confirmAlert({
+      title: "Confirm Deletion",
+      message: "Are you sure you want to delete this product?",
+      buttons: [
+        {
+          label: "Yes",
+          onClick: async () => {
+            try {
+              await productApi.delete(productId);
+              toast.success("Product deleted successfully");
+              refreshProducts();
+            } catch (error) {
+              toast.error("Failed to delete product");
+            }
+          },
+        },
+        {
+          label: "No",
+        },
+      ],
+    });
   };
 
   const filteredProducts = Array.isArray(products)

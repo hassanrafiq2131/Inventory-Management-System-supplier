@@ -15,11 +15,9 @@ import {
   User as FirebaseUser,
 } from "firebase/auth";
 import { app } from "../config/firebase";
-import { authApi } from "../services/api";
 
 interface User extends FirebaseUser {
   accessToken: string;
-  mongoId?: string;
 }
 
 interface AuthContextType {
@@ -46,22 +44,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const auth = getAuth(app);
 
-  const syncUserWithMongoDB = async (user: FirebaseUser) => {
-    try {
-      const response = await authApi.sync();
-      return response.data;
-    } catch (error) {
-      console.error("Error syncing user with MongoDB:", error);
-    }
-  };
-
   async function register(email: string, password: string): Promise<void> {
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       email,
       password
     );
-    await syncUserWithMongoDB(userCredential.user);
+    const user = userCredential.user;
+    const accessToken = await user.getIdToken();
+    setCurrentUser({ ...user, accessToken });
   }
 
   async function login(email: string, password: string) {
@@ -72,8 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
     const user = userCredential.user;
     const accessToken = await user.getIdToken();
-    const mongoUser = await syncUserWithMongoDB(user);
-    setCurrentUser({ ...user, accessToken, mongoId: mongoUser?._id });
+    setCurrentUser({ ...user, accessToken });
   }
 
   async function logout() {
@@ -89,8 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const accessToken = await user.getIdToken();
-        const mongoUser = await syncUserWithMongoDB(user);
-        setCurrentUser({ ...user, accessToken, mongoId: mongoUser?._id });
+        setCurrentUser({ ...user, accessToken });
       } else {
         setCurrentUser(null);
       }

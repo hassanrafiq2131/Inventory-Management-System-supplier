@@ -58,7 +58,9 @@ const ProductModal = ({
     }));
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -66,6 +68,7 @@ const ProductModal = ({
         return;
       }
       setImageFile(file);
+      await handleImageUpload(file); // Call the upload function directly
     }
   };
 
@@ -128,7 +131,7 @@ const ProductModal = ({
               Drag & drop images here, or click to select
             </label>
           </div>
-          <p className="text-xs text-gray-500">PNG, JPG, WEBP up to 5MB</p>
+          <p className="text-xs text-gray-500">PNG up to 5MB</p>
         </div>
 
         {uploading && (

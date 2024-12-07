@@ -6,6 +6,8 @@ import OrderModal from "../components/modals/OrderModal";
 import OrderDetailsModal from "../components/modals/OrderDetailsModal"; // Import the new modal
 import { orderApi } from "../services/api";
 import { toast } from "react-hot-toast";
+import { confirmAlert } from "react-confirm-alert";
+import "react-confirm-alert/src/react-confirm-alert.css";
 
 const Orders = () => {
   const [filterStatus, setFilterStatus] = useState("all");
@@ -32,17 +34,31 @@ const Orders = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this order?")) {
-      try {
-        await orderApi.delete(id);
-        toast.success("Order deleted successfully");
-        refreshOrders();
-      } catch (error) {
-        toast.error("Delete failed. Please try again.");
-        console.error("Error:", error);
-      }
-    }
+  const handleDelete = async (orderId: string) => {
+    confirmAlert({
+      title: "Confirm Deletion",
+      message: "Are you sure you want to delete this order?", // Correct key is `message`, not `description`
+      buttons: [
+        {
+          label: "Yes",
+          onClick: async () => {
+            try {
+              await orderApi.delete(orderId);
+              toast.success("Order deleted successfully");
+              refreshOrders();
+            } catch (error) {
+              toast.error("Failed to delete order");
+            }
+          },
+        },
+        {
+          label: "No",
+          onClick: () => {
+            toast.success("Deletion canceled");
+          },
+        },
+      ],
+    });
   };
 
   const handleStatusChange = async (id: string, status: string) => {

@@ -6,10 +6,21 @@ import { toast } from "react-hot-toast";
 
 const Invoices = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [invoices, setInvoices] = useState([]);
+  interface Invoice {
+    _id: string;
+    number: string;
+    supplier?: {
+      name: string;
+    };
+    date: string;
+    amount: number;
+    status: string;
+  }
+
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   // Fetch invoices
   useEffect(() => {
@@ -39,6 +50,39 @@ const Invoices = () => {
     } catch (err) {
       console.error("Error fetching recommendations:", err);
       toast.error("Failed to fetch supplier recommendations");
+    }
+  };
+
+  interface DownloadResponse {
+    data: BlobPart;
+  }
+
+  const handleDownloadInvoice = async (
+    invoiceId: string,
+    invoiceNumber: string
+  ): Promise<void> => {
+    try {
+      const response: DownloadResponse = await invoiceApi.download(invoiceId);
+
+      // Create a blob from the response
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary link and trigger download
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Invoice-${invoiceNumber}.pdf`); // Dynamic filename
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`Invoice ${invoiceNumber} downloaded successfully`);
+    } catch (error) {
+      console.error("Error downloading invoice:", error);
+      toast.error(`Failed to download Invoice ${invoiceNumber}`);
     }
   };
 
@@ -161,11 +205,9 @@ const Invoices = () => {
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => {
-                        /* Download invoice logic */
-                        console.log(`Downloading invoice ${invoice.number}`);
-                        toast.success(`Downloading invoice ${invoice.number}`);
-                      }}
+                      onClick={() =>
+                        handleDownloadInvoice(invoice._id, invoice.number)
+                      }
                       className="text-gray-600 hover:text-gray-900"
                     >
                       <Download className="w-4 h-4" />

@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = "mongodb://localhost:27017/web-inv-mgmt-sys";
+const MONGO_URI = process.env.MONGODB_URI;
 
 if (!MONGO_URI) {
   console.error('MongoDB URI is not defined in the environment variables');

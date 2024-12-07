@@ -30,6 +30,8 @@
     "nodemailer": "^6.9.11",
     "pdfkit": "^0.15.1",
     "react": "^18.3.1",
+    "react-confirm": "^0.3.0-7",
+    "react-confirm-alert": "^3.0.6",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",
     "react-hotkeys-hook": "^4.6.1",

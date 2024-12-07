@@ -25,4 +25,6 @@ router.put('/:id/status', invoiceController.updateInvoiceStatus);
 // Route for supplier recommendations
 // router.get('/recommendations', invoiceController.getSupplierRecommendations);
 
+router.get('/:id/download', invoiceController.downloadInvoice);
+
 export default router;

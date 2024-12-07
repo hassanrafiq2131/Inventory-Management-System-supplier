@@ -95,6 +95,8 @@ export const invoiceApi = {
   delete: (id: string) => api.delete(`/invoices/${id}`), // Delete an invoice
   updateStatus: (id: string, status: string) => api.put(`/invoices/${id}/status`, { status }), // Update invoice status
   getRecommendations: () => api.get('/invoices/recommendations'), // Get supplier recommendations
+  download: (id: string) =>
+    api.get(`/invoices/${id}/download`, { responseType: 'blob' }), 
 };
 
 export const stockRequestApi = {
