@@ -1,8 +1,14 @@
 import React, { useState } from "react";
 import { X } from "lucide-react";
 import { Order } from "../../hooks/useOrders";
-import { invoiceApi } from "../../services/api"; // Import the invoice API
-import { toast } from "react-hot-toast"; // Toast for notifications
+import { invoiceApi, productApi, orderApi } from "../../services/api";
+import { toast } from "react-hot-toast";
+import { loadStripe } from "@stripe/stripe-js";
+import { useInventory } from "../../hooks/useInventory";
+import { paymentApi } from "../../services/api";
+import { useOrders } from "../../hooks/useOrders";
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "");
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
@@ -15,16 +21,97 @@ const OrderDetailsModal = ({
   onClose,
   order,
 }: OrderDetailsModalProps) => {
+  const [isPaying, setIsPaying] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const { refreshProducts } = useInventory();
+  const { updateOrderStatus } = useOrders();
 
-  if (!isOpen || !order) return null;
+  if (!isOpen || !order) {
+    return null;
+  }
 
-  const handleGenerateInvoice = async () => {
-    if (order.status !== "approved") {
-      toast.error("Invoice can only be generated for approved orders.");
-      return;
+  const handleStripePayment = async () => {
+    const stripe = await stripePromise;
+
+    if (!stripe) {
+      toast.error("Stripe initialization failed.");
+      return false;
     }
 
+    try {
+      setIsGenerating(true);
+
+      const session = await paymentApi.createPaymentSession(
+        order.items.map((item) => ({
+          name: item.product?.name || "Unknown Product",
+          price: item.price,
+          quantity: item.quantity,
+        }))
+      );
+      await updateOrderStatus(order._id, "approved");
+
+      // console.log("session: ", session);
+
+      const result = await stripe.redirectToCheckout({
+        sessionId: session.sessionId,
+      });
+
+      if (result.error) {
+        toast.error(result.error.message || "Payment failed.");
+        return false;
+      }
+      console.log("payment hasnt failed so far");
+      // await orderApi.update(order._id, { status: "approved" });
+      return true;
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Payment failed. Please try again.");
+      return false;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleAddToInventory = async () => {
+    for (const item of order.items) {
+      const product = item.product;
+      if (product) {
+        try {
+          await productApi.create({
+            name: product.name,
+            sku: product.sku,
+            category: product.category,
+            quantity: item.quantity,
+            price: product.price,
+            reorderPoint: product.reorderPoint,
+            imageUrl: product.imageUrl,
+          });
+          refreshProducts();
+        } catch (err) {
+          console.error("Error adding product to inventory:", err);
+          toast.error(`Failed to add ${product.name} to inventory.`);
+        }
+      }
+    }
+    toast.success("Products added to inventory successfully.");
+  };
+
+  const handlePaymentAndApproval = async () => {
+    const paymentSuccess = await handleStripePayment();
+    if (!paymentSuccess) return;
+
+    try {
+      // await orderApi.update(order._id, { status: "approved" });
+      console.log("order marked as approved");
+      toast.success("Order marked as approved.");
+      await handleAddToInventory();
+    } catch (error) {
+      console.error("Error approving order:", error);
+      toast.error("Failed to approve order. Please try again.");
+    }
+  };
+
+  const handleGenerateInvoice = async () => {
     try {
       setIsGenerating(true);
       const response = await invoiceApi.createFromOrder(order._id);
@@ -51,7 +138,7 @@ const OrderDetailsModal = ({
           </button>
         </div>
 
-        {/* Invoice Header */}
+        {/* Order Details */}
         <div className="mb-6">
           <div className="flex justify-between">
             <div>
@@ -65,20 +152,9 @@ const OrderDetailsModal = ({
               </p>
             </div>
           </div>
-          <div className="mt-4">
-            <h3 className="text-lg font-semibold">Customer Information</h3>
-            <p className="text-gray-700">
-              <strong>Requested By:</strong> {order.requestedBy}
-            </p>
-            {order.approvedBy && (
-              <p className="text-gray-700">
-                <strong>Approved By:</strong> {order.approvedBy}
-              </p>
-            )}
-          </div>
         </div>
 
-        {/* Invoice Table */}
+        {/* Order Items Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full border border-gray-300">
             <thead className="bg-gray-100">
@@ -88,9 +164,6 @@ const OrderDetailsModal = ({
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-b">
                   Product Name
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-b">
-                  SKU
                 </th>
                 <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-b">
                   Quantity
@@ -105,25 +178,19 @@ const OrderDetailsModal = ({
             </thead>
             <tbody>
               {order.items.map((item, index) => {
-                const product = item.product || {}; // Fallback to an empty object if product is null or undefined
-                const total = item.quantity * item.price;
+                const product = item.product || {};
                 return (
                   <tr key={index} className="border-b">
                     <td className="px-4 py-3">
                       <img
                         src={
                           product.imageUrl || "https://via.placeholder.com/150"
-                        } // Default placeholder if imageUrl is missing
-                        alt={product.name || "Product Image"} // Default alt text
+                        }
+                        alt={product.name || "Product"}
                         className="w-12 h-12 object-cover rounded-full"
                       />
                     </td>
-                    <td className="px-4 py-3 text-gray-800">
-                      {product.name || "Unknown Product"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {product.sku || "N/A"}
-                    </td>
+                    <td className="px-4 py-3 text-gray-800">{product.name}</td>
                     <td className="px-4 py-3 text-center text-gray-800">
                       {item.quantity}
                     </td>
@@ -131,7 +198,7 @@ const OrderDetailsModal = ({
                       ${item.price.toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-800">
-                      ${total.toFixed(2)}
+                      ${(item.quantity * item.price).toFixed(2)}
                     </td>
                   </tr>
                 );
@@ -140,7 +207,7 @@ const OrderDetailsModal = ({
           </table>
         </div>
 
-        {/* Invoice Footer */}
+        {/* Total Amount */}
         <div className="mt-6">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Total Amount</h3>
@@ -150,9 +217,25 @@ const OrderDetailsModal = ({
           </div>
         </div>
 
-        {/* Generate Invoice Button */}
-        {order.status === "approved" && (
-          <div className="mt-6 flex justify-end">
+        {/* Payment and Generate Invoice Buttons */}
+        <div className="mt-6 flex justify-end space-x-3">
+          {/* Show Pay Now Button if order is not approved */}
+          {!order.status || order.status !== "approved" ? (
+            <button
+              onClick={handlePaymentAndApproval}
+              disabled={isPaying}
+              className={`px-4 py-2 text-white rounded-md ${
+                isPaying
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-600 hover:bg-green-700"
+              }`}
+            >
+              {isPaying ? "Processing..." : "Pay Now"}
+            </button>
+          ) : null}
+
+          {/* Show Generate Invoice Button if order is approved */}
+          {order.status === "approved" ? (
             <button
               onClick={handleGenerateInvoice}
               disabled={isGenerating}
@@ -164,8 +247,8 @@ const OrderDetailsModal = ({
             >
               {isGenerating ? "Generating..." : "Generate Invoice"}
             </button>
-          </div>
-        )}
+          ) : null}
+        </div>
       </div>
     </div>
   );

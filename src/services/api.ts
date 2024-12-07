@@ -127,5 +127,17 @@ export const suppliersInventoryApi = {
   },
 };
 
+export const paymentApi = {
+  createPaymentSession: async (items: any) => {
+    try {
+      const response = await api.post("/payments/create-session", { items });
+      return response.data; // Should contain the sessionId
+    } catch (error) {
+      console.error("Error creating payment session:", error);
+      throw new Error("Failed to create payment session");
+    }
+  },
+};
+
 
 export default api;

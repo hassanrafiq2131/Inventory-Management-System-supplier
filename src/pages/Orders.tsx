@@ -165,7 +165,7 @@ const Orders = () => {
                     ${order.totalAmount?.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <select
+                    {/* <select
                       value={order.status}
                       onChange={(e) =>
                         handleStatusChange(order._id, e.target.value)
@@ -181,7 +181,19 @@ const Orders = () => {
                       <option value="pending">Pending</option>
                       <option value="approved">Approved</option>
                       <option value="rejected">Rejected</option>
-                    </select>
+                    </select> */}
+                    <span
+                      className={`px-2 text-xs rounded-full ${
+                        order.status === "approved"
+                          ? "bg-green-100 text-green-800"
+                          : order.status === "rejected"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {order.status.charAt(0).toUpperCase() +
+                        order.status.slice(1)}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     <button

@@ -50,7 +50,7 @@ export const useOrders = () => {
       if (auth.currentUser) {
         await orderApi.updateStatus(orderId, status);
         await fetchOrders();
-        toast.success('Order status updated successfully');
+        // toast.success('Order status updated successfully');
       } else {
         toast.error('User is not authenticated');
       }
