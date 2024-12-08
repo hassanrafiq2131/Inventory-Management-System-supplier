@@ -13,7 +13,7 @@ interface OrderModalProps {
 const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
   const { items: supplierItems, refreshItems } = useSupplierInventory(); // Fetch supplier inventory
   const [orderItems, setOrderItems] = useState([
-    { productId: "", quantity: 1, price: 0 },
+    { productId: "", name: "", SKU: "", category: "", quantity: 1, price: 0 },
   ]);
   const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(
     null
@@ -25,7 +25,16 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
       if (order) {
         setOrderItems(order.items);
       } else {
-        setOrderItems([{ productId: "", quantity: 1, price: 0 }]);
+        setOrderItems([
+          {
+            productId: "",
+            name: "",
+            SKU: "",
+            category: "",
+            quantity: 1,
+            price: 0,
+          },
+        ]);
         setSearchQuery("");
       }
     }
@@ -37,7 +46,10 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
   }, [supplierItems]);
 
   const handleAddItem = () => {
-    setOrderItems([...orderItems, { productId: "", quantity: 1, price: 0 }]);
+    setOrderItems([
+      ...orderItems,
+      { productId: "", name: "", SKU: "", category: "", quantity: 1, price: 0 },
+    ]);
     toast.success("Item slot added to the order!");
   };
 
@@ -53,15 +65,15 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
     if (field === "productId") {
       const product = supplierItems.find((p) => p._id === value);
       if (product) {
+        newItems[index].name = product.name || "";
+        newItems[index].SKU = product.sku || "";
+        newItems[index].category = product.category || "";
         newItems[index].price = product.price;
         newItems[index].quantity = 1;
         toast.success(`Product "${product.name}" added to the order!`);
       }
     }
-
-    setOrderItems(newItems);
   };
-
   const calculateTotal = () => {
     return orderItems.reduce(
       (sum, item) => sum + item.quantity * item.price,
@@ -80,12 +92,23 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      items: orderItems,
-      total: calculateTotal(),
+
+    // Validate fields
+    const hasInvalidFields = orderItems.some((item, index) => {
+      if (!item.name || !item.SKU || !item.category || item.price <= 0) {
+        toast.error(
+          `Item ${
+            index + 1
+          } is invalid. Please ensure all mandatory fields are filled, and price is greater than zero.`
+        );
+        return true;
+      }
+      return false;
     });
-    refreshItems(); // Refresh supplier inventory
-    onClose();
+
+    if (hasInvalidFields) {
+      return;
+    }
   };
 
   if (!isOpen) return null;

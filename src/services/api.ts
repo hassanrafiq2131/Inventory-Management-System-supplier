@@ -3,7 +3,7 @@ import { getAuth } from 'firebase/auth';
 import { app } from '../config/firebase';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: 'https://inventory-management-system-lovat.vercel.app/api/',
 });
 
 // Add request interceptor to include Firebase token
