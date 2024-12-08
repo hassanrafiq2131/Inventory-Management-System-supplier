@@ -42,16 +42,16 @@ const Invoices = () => {
     fetchInvoices();
   }, []);
 
-  const handleGetRecommendations = async () => {
-    try {
-      const recommendations = await invoiceApi.getRecommendations();
-      console.log("Supplier Recommendations:", recommendations.data);
-      toast.success("Supplier recommendations fetched successfully");
-    } catch (err) {
-      console.error("Error fetching recommendations:", err);
-      toast.error("Failed to fetch supplier recommendations");
-    }
-  };
+  // const handleGetRecommendations = async () => {
+  //   try {
+  //     const recommendations = await invoiceApi.getRecommendations();
+  //     console.log("Supplier Recommendations:", recommendations.data);
+  //     toast.success("Supplier recommendations fetched successfully");
+  //   } catch (err) {
+  //     console.error("Error fetching recommendations:", err);
+  //     toast.error("Failed to fetch supplier recommendations");
+  //   }
+  // };
 
   interface DownloadResponse {
     data: BlobPart;
@@ -103,18 +103,6 @@ const Invoices = () => {
       animate={{ opacity: 1 }}
       className="space-y-6"
     >
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Invoice Management</h1>
-        <button
-          onClick={handleGetRecommendations}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-blue-700 transition-colors"
-        >
-          <MessageSquare className="w-5 h-5" />
-          <span>Get Recommendations</span>
-        </button>
-      </div>
-
       {/* Search Bar */}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="p-4 border-b">
