@@ -44,7 +44,7 @@ export const createInvoiceFromOrder = async (req, res) => {
       amount,
       dueDate,
       date: new Date(), // Explicitly set the date
-      status: 'pending', // Ensure the status value is valid
+      status: 'approved', // Ensure the status value is valid
     };
 
     const invoice = new Invoice(invoiceData);
