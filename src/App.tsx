@@ -18,7 +18,6 @@ import Products from "./pages/Products";
 export const menuItems = [
   { label: "Dashboard", path: "/" },
   { label: "Products", path: "/Products" },
-  { label: "Orders", path: "/orders" },
   { label: "Stock Requests", path: "/stock-requests" },
   { label: "Reports", path: "/reports" },
   { label: "Invoices", path: "/invoices" },

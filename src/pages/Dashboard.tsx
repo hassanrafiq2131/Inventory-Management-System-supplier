@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Package, TrendingUp, AlertTriangle, DollarSign, Star } from "lucide-react";
+import { Package, TrendingUp, AlertTriangle, DollarSign } from "lucide-react";
 import { suppliersInventoryApi, stockRequestApi, invoiceApi } from "../services/api";
 
 const Dashboard = () => {
@@ -48,10 +48,24 @@ const Dashboard = () => {
         const pendingRequests = stockRequestsRes.data.filter((req) => req.status === "pending").length;
         const pendingInvoices = invoicesRes.data.filter((inv) => inv.status === "pending").length;
 
-        // Top performing products
-        const topProducts = inventoryRes.data
-          .sort((a, b) => b.sales - a.sales)
-          .slice(0, 5); // Top 5 products
+        // Calculate products with the highest stock requests
+        const stockRequestsByProduct = stockRequestsRes.data.reduce((acc, request) => {
+          if (request.product) { // Check if product exists
+            const productId = request.product._id;
+            if (!acc[productId]) {
+              acc[productId] = {
+                product: request.product,
+                totalQuantity: 0,
+              };
+            }
+            acc[productId].totalQuantity += request.quantity;
+          }
+          return acc;
+        }, {});
+
+        const topRequestedProducts = Object.values(stockRequestsByProduct)
+          .sort((a, b) => b.totalQuantity - a.totalQuantity)
+          .slice(0, 5); // Top 5 products with the highest requests
 
         // Recent stock requests
         const recentRequests = stockRequestsRes.data.slice(0, 5); // Latest 5 requests
@@ -83,7 +97,7 @@ const Dashboard = () => {
           },
         ]);
 
-        setTopProducts(topProducts);
+        setTopProducts(topRequestedProducts);
         setRecentRequests(recentRequests);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -101,7 +115,7 @@ const Dashboard = () => {
     >
       <h1 className="text-2xl font-bold text-gray-900">Supplier Dashboard</h1>
 
-      {/* Stats Overview in Horizontal Layout */}
+      {/* Stats Overview */}
       <div className="flex flex-wrap justify-between gap-6">
         {stats.map((stat, index) => (
           <motion.div
@@ -122,11 +136,11 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Top Performing Products */}
+      {/* Top Requested Products */}
       <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Performing Products</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Top sold Products</h2>
         <ul className="space-y-3">
-          {topProducts.map((product) => (
+          {topProducts.map(({ product, totalQuantity }) => (
             <li
               key={product._id}
               className="flex items-center justify-between bg-gray-50 p-3 rounded-lg shadow-sm"
@@ -135,7 +149,9 @@ const Dashboard = () => {
                 <p className="text-sm font-medium text-gray-700">{product.name}</p>
                 <p className="text-xs text-gray-500">{product.category}</p>
               </div>
-              <div className="text-green-600 font-semibold">Sales: {product.sales}</div>
+              <div className="text-blue-600 font-semibold">
+                Requests: {totalQuantity}
+              </div>
             </li>
           ))}
         </ul>

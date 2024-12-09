@@ -5,16 +5,28 @@ import path from 'path';
 import fs from 'fs';
 
 // Get all invoices for a user
+
+import SupplierInventory from '../models/SupplierInventory.js';
+
 export const getInvoices = async (req, res) => {
   try {
-    const invoices = await Invoice.find({ owner: req.user.uid })
-      .populate('items.product')
+    // Get all product IDs owned by the supplier
+    const supplierProducts = await SupplierInventory.find({ owner: req.user.uid }).select('_id');
+
+    const productIds = supplierProducts.map(product => product._id);
+
+    // Fetch invoices containing these products
+    const invoices = await Invoice.find({ 'items.product': { $in: productIds } })
+      .populate('items.product') // Populate product details
       .sort({ date: -1 });
+
     res.status(200).json(invoices);
   } catch (error) {
+    console.error('Error fetching invoices:', error);
     res.status(500).json({ message: error.message });
   }
 };
+
 
 export const createInvoiceFromOrder = async (req, res) => {
   try {
