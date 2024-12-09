@@ -32,8 +32,8 @@ export const createPaymentSession = async (req, res) => {
         payment_method_types: ["card"],
         mode: "payment",
         line_items: lineItems,
-        success_url: `${process.env.CLIENT_URL}/orders`,
-        cancel_url: `${process.env.CLIENT_URL}/order`,
+        success_url: `${process.env.CLIENT_URL}`,
+        cancel_url: `${process.env.CLIENT_URL}`,
       });
   
       res.status(200).json({ sessionId: session.id });
