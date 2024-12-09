@@ -3,7 +3,7 @@ import SupplierInventory from '../models/SupplierInventory.js';
 // Get all supplier inventory items
 export const getProducts = async (req, res) => {
   try {
-    const products = await SupplierInventory.find({ owner: req.user.uid });
+    const products = await SupplierInventory.find();
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
