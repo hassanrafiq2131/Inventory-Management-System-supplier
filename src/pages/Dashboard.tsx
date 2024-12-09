@@ -1,16 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import { Package, TrendingUp, AlertTriangle, DollarSign } from "lucide-react";
-import { suppliersInventoryApi, invoiceApi, stockRequestApi } from "../services/api";
+import { Package, TrendingUp, AlertTriangle, DollarSign, Star } from "lucide-react";
+import { suppliersInventoryApi, stockRequestApi, invoiceApi } from "../services/api";
 
 const Dashboard = () => {
   const [stats, setStats] = useState([
@@ -32,46 +23,38 @@ const Dashboard = () => {
       icon: AlertTriangle,
       color: "bg-yellow-500",
     },
-    { 
-      title: "Pending Invoices", 
-      value: "-", 
-      icon: DollarSign, 
-      color: "bg-purple-500" 
+    {
+      title: "Pending Invoices",
+      value: "-",
+      icon: DollarSign,
+      color: "bg-purple-500",
     },
   ]);
-  const [salesData, setSalesData] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+  const [recentRequests, setRecentRequests] = useState([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch supplier's inventory data
         const [inventoryRes, lowStockRes, stockRequestsRes, invoicesRes] = await Promise.all([
           suppliersInventoryApi.getAll(),
           suppliersInventoryApi.getLowStock(),
           stockRequestApi.getAll(),
-          invoiceApi.getAll()
+          invoiceApi.getAll(),
         ]);
 
         const totalProducts = inventoryRes.data.length;
         const lowStockItems = lowStockRes.data.length;
-        const pendingRequests = stockRequestsRes.data.filter(req => req.status === 'pending').length;
-        const pendingInvoices = invoicesRes.data.filter(inv => inv.status === 'pending').length;
+        const pendingRequests = stockRequestsRes.data.filter((req) => req.status === "pending").length;
+        const pendingInvoices = invoicesRes.data.filter((inv) => inv.status === "pending").length;
 
-        // Calculate monthly revenue from invoices
-        const monthlyRevenue = invoicesRes.data.reduce((acc, invoice) => {
-          const month = new Date(invoice.date).toLocaleString('default', { month: 'short' });
-          if (!acc[month]) {
-            acc[month] = 0;
-          }
-          acc[month] += invoice.amount;
-          return acc;
-        }, {});
+        // Top performing products
+        const topProducts = inventoryRes.data
+          .sort((a, b) => b.sales - a.sales)
+          .slice(0, 5); // Top 5 products
 
-        // Transform monthly revenue for chart
-        const revenueChartData = Object.entries(monthlyRevenue).map(([month, value]) => ({
-          name: month,
-          value: value
-        }));
+        // Recent stock requests
+        const recentRequests = stockRequestsRes.data.slice(0, 5); // Latest 5 requests
 
         setStats([
           {
@@ -100,7 +83,8 @@ const Dashboard = () => {
           },
         ]);
 
-        setSalesData(revenueChartData);
+        setTopProducts(topProducts);
+        setRecentRequests(recentRequests);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       }
@@ -113,51 +97,67 @@ const Dashboard = () => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="space-y-6"
+      className="space-y-8"
     >
       <h1 className="text-2xl font-bold text-gray-900">Supplier Dashboard</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Overview in Horizontal Layout */}
+      <div className="flex flex-wrap justify-between gap-6">
         {stats.map((stat, index) => (
           <motion.div
             key={index}
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white p-6 rounded-lg shadow-sm"
+            className="flex flex-col items-center bg-white p-6 rounded-lg shadow-sm w-[calc(25%-1rem)]"
           >
-            <div className="flex items-center">
-              <div className={`p-3 rounded-full ${stat.color}`}>
-                <stat.icon className="w-6 h-6 text-white" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">
-                  {stat.title}
-                </p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {stat.value}
-                </p>
-              </div>
+            <div className={`p-3 rounded-full ${stat.color}`}>
+              <stat.icon className="w-8 h-8 text-white" />
+            </div>
+            <div className="mt-4 text-center">
+              <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+              <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
             </div>
           </motion.div>
         ))}
       </div>
 
+      {/* Top Performing Products */}
       <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Monthly Revenue Overview
-        </h2>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={salesData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#3B82F6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Performing Products</h2>
+        <ul className="space-y-3">
+          {topProducts.map((product) => (
+            <li
+              key={product._id}
+              className="flex items-center justify-between bg-gray-50 p-3 rounded-lg shadow-sm"
+            >
+              <div>
+                <p className="text-sm font-medium text-gray-700">{product.name}</p>
+                <p className="text-xs text-gray-500">{product.category}</p>
+              </div>
+              <div className="text-green-600 font-semibold">Sales: {product.sales}</div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Recent Stock Requests */}
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Stock Requests</h2>
+        <ul className="space-y-3">
+          {recentRequests.map((request) => (
+            <li
+              key={request._id}
+              className="flex items-center justify-between bg-gray-50 p-3 rounded-lg shadow-sm"
+            >
+              <div>
+                <p className="text-sm font-medium text-gray-700">{request.productName}</p>
+                <p className="text-xs text-gray-500">Status: {request.status}</p>
+              </div>
+              <div className="text-blue-600 font-semibold">Quantity: {request.quantity}</div>
+            </li>
+          ))}
+        </ul>
       </div>
     </motion.div>
   );
