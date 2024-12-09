@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { X, Plus, Minus } from "lucide-react";
 import { useSupplierInventory } from "../../hooks/useSuppllierInventory"; // Corrected hook import
 import { toast } from "react-hot-toast";
@@ -11,7 +11,7 @@ interface OrderModalProps {
 }
 
 const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
-  const { items: supplierItems, refreshItems } = useSupplierInventory(); // Fetch supplier inventory
+  const { items: supplierItems } = useSupplierInventory(); // Fetch supplier inventory
   const [orderItems, setOrderItems] = useState([
     { productId: "", name: "", SKU: "", category: "", quantity: 1, price: 0 },
   ]);
@@ -19,6 +19,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
     null
   );
   const [searchQuery, setSearchQuery] = useState("");
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -40,10 +42,16 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
     }
   }, [isOpen, order]);
 
-  // Debug supplierItems
+  // Close dropdown on outside click
   useEffect(() => {
-    console.log("Supplier Items Fetched:", supplierItems);
-  }, [supplierItems]);
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!dropdownRef.current?.contains(event.target as Node)) {
+        setOpenDropdownIndex(null);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const handleAddItem = () => {
     setOrderItems([
@@ -73,7 +81,9 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
         toast.success(`Product "${product.name}" added to the order!`);
       }
     }
+    setOrderItems(newItems);
   };
+
   const calculateTotal = () => {
     return orderItems.reduce(
       (sum, item) => sum + item.quantity * item.price,
@@ -81,19 +91,18 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
     );
   };
 
-  const getAvailableSupplierItems = () => {
+  const filteredSupplierItems = useMemo(() => {
     const selectedProductIds = orderItems.map((item) => item.productId);
-    return (
-      supplierItems?.filter(
-        (product) => !selectedProductIds.includes(product._id)
-      ) || []
+    return supplierItems?.filter(
+      (product) =>
+        !selectedProductIds.includes(product._id) &&
+        product.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  };
+  }, [orderItems, supplierItems, searchQuery]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate fields
     const hasInvalidFields = orderItems.some((item, index) => {
       if (!item.name || !item.SKU || !item.category || item.price <= 0) {
         toast.error(
@@ -109,6 +118,10 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
     if (hasInvalidFields) {
       return;
     }
+
+    onSubmit({ items: orderItems, total: calculateTotal() });
+    onClose();
+    toast.success("Order submitted successfully!");
   };
 
   if (!isOpen) return null;
@@ -135,12 +148,11 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
             );
             return (
               <div key={index} className="flex items-center space-x-4">
-                {/* Product Dropdown */}
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700">
                     Supplier Product
                   </label>
-                  <div className="relative">
+                  <div className="relative" ref={dropdownRef}>
                     <input
                       type="text"
                       value={
@@ -158,13 +170,8 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                     {openDropdownIndex === index && (
                       <div className="absolute z-10 w-full mt-2 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                         <ul>
-                          {getAvailableSupplierItems()
-                            .filter((product) =>
-                              product.name
-                                .toLowerCase()
-                                .includes(searchQuery.toLowerCase())
-                            )
-                            .map((product) => (
+                          {filteredSupplierItems.length > 0 ? (
+                            filteredSupplierItems.map((product) => (
                               <li
                                 key={product._id}
                                 className="flex items-center px-3 py-2 cursor-pointer hover:bg-gray-100"
@@ -187,14 +194,18 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                                   {product.name} - ${product.price}
                                 </span>
                               </li>
-                            ))}
+                            ))
+                          ) : (
+                            <li className="px-3 py-2 text-gray-500">
+                              No products found.
+                            </li>
+                          )}
                         </ul>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Quantity Input */}
                 <div className="w-24">
                   <label className="block text-sm font-medium text-gray-700">
                     Quantity
@@ -206,7 +217,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                       handleItemChange(
                         index,
                         "quantity",
-                        Math.max(parseInt(e.target.value), 1)
+                        Math.max(parseInt(e.target.value) || 1, 1)
                       )
                     }
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
@@ -214,7 +225,6 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                   />
                 </div>
 
-                {/* Price Input */}
                 <div className="w-24">
                   <label className="block text-sm font-medium text-gray-700">
                     Price
@@ -226,7 +236,7 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                       handleItemChange(
                         index,
                         "price",
-                        parseFloat(e.target.value)
+                        parseFloat(e.target.value) || 0
                       )
                     }
                     className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
@@ -234,7 +244,6 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
                   />
                 </div>
 
-                {/* Remove Button */}
                 <button
                   type="button"
                   onClick={() => handleRemoveItem(index)}
@@ -246,7 +255,6 @@ const OrderModal = ({ isOpen, onClose, onSubmit, order }: OrderModalProps) => {
             );
           })}
 
-          {/* Footer */}
           <div className="flex justify-between items-center">
             <button
               type="button"
